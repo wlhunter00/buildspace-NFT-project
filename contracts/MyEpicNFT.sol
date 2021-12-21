@@ -1,25 +1,89 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
+import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "hardhat/console.sol";
+
+import {Base64} from "./libraries/Base64.sol";
 
 contract MyEpicNFT is ERC721URIStorage {
     using Counters for Counters.Counter;
     Counters.Counter private _tokenIds;
 
+    string baseSvg =
+        "<svg xmlns='http://www.w3.org/2000/svg' preserveAspectRatio='xMinYMin meet' viewBox='0 0 350 350'><style>.base { fill: white; font-family: serif; font-size: 24px; }</style><rect width='100%' height='100%' fill='black' /><text x='50%' y='40%' class='base' dominant-baseline='middle' text-anchor='middle'>Will's Web3 Welcome</text><text x='50%' y='60%' class='base' dominant-baseline='middle' text-anchor='middle'>";
+
+    string[] emotes = [
+        "POGGERS",
+        "catJAM",
+        "EZ",
+        "PogU",
+        "gachiBASS",
+        "blobDance",
+        "peepoClap",
+        "HYPERS",
+        "peepoHappy",
+        "peepoHey"
+    ];
+
     constructor() ERC721("SquareNFT", "SQUARE") {
         console.log("NFT Contract");
     }
 
+    function pickRandomEmote(uint256 tokenId)
+        public
+        view
+        returns (string memory)
+    {
+        uint256 rand = random(
+            string(abi.encodePacked("EMOTE", Strings.toString(tokenId)))
+        );
+        rand = rand % emotes.length;
+        return emotes[rand];
+    }
+
+    function random(string memory input) internal pure returns (uint256) {
+        return uint256(keccak256(abi.encodePacked(input)));
+    }
+
     function makeAnEpicNFT() public {
         uint256 newItemId = _tokenIds.current();
-        _safeMint(msg.sender, newItemId);
-        _setTokenURI(
-            newItemId,
-            "data:application/json;base64,ewogICAgIm5hbWUiOiAiV2lsbCdzIChPbi1DaGFpbikgV2ViMyBXZWxjb21lIiwKICAgICJkZXNjcmlwdGlvbiI6ICJXZWxjb21lIHRvIFdlYjMhIEhlcmUgaXMgeW91ciBmaXJzdCBORlQuIiwKICAgICJpbWFnZSI6ICJkYXRhOmltYWdlL3N2Zyt4bWw7YmFzZTY0LFBITjJaeUI0Yld4dWN6MGlhSFIwY0RvdkwzZDNkeTUzTXk1dmNtY3ZNakF3TUM5emRtY2lJSEJ5WlhObGNuWmxRWE53WldOMFVtRjBhVzg5SW5oTmFXNVpUV2x1SUcxbFpYUWlJSFpwWlhkQ2IzZzlJakFnTUNBek5UQWdNelV3SWo0S0lDQWdJRHh6ZEhsc1pUNHVZbUZ6WlNCN0lHWnBiR3c2SUhkb2FYUmxPeUJtYjI1MExXWmhiV2xzZVRvZ2MyVnlhV1k3SUdadmJuUXRjMmw2WlRvZ01UUndlRHNnZlR3dmMzUjViR1UrQ2lBZ0lDQThjbVZqZENCM2FXUjBhRDBpTVRBd0pTSWdhR1ZwWjJoMFBTSXhNREFsSWlCbWFXeHNQU0ppYkdGamF5SWdMejRLSUNBZ0lEeDBaWGgwSUhnOUlqVXdKU0lnZVQwaU5UQWxJaUJqYkdGemN6MGlZbUZ6WlNJZ1pHOXRhVzVoYm5RdFltRnpaV3hwYm1VOUltMXBaR1JzWlNJZ2RHVjRkQzFoYm1Ob2IzSTlJbTFwWkdSc1pTSStWMmxzYkNkeklGZGxZak1nVjJWc1kyOXRaVHd2ZEdWNGRENEtQQzl6ZG1jKyIKfQ"
+
+        string memory emote = pickRandomEmote(newItemId);
+
+        string memory finalSvg = string(
+            abi.encodePacked(baseSvg, emote, "</text></svg>")
         );
+
+        string memory json = Base64.encode(
+            bytes(
+                string(
+                    abi.encodePacked(
+                        '{"name": "Wills Web3 Welcome :',
+                        emote,
+                        ':", "description": "Welcome to Web3! Here is your first NFT.", "image": "data:image/svg+xml;base64,',
+                        // We add data:image/svg+xml;base64 and then append our base64 encode our svg.
+                        Base64.encode(bytes(finalSvg)),
+                        '"}'
+                    )
+                )
+            )
+        );
+
+        string memory finalTokenUri = string(
+            abi.encodePacked("data:application/json;base64,", json)
+        );
+
+        console.log("\n--------------------");
+        console.log(finalSvg);
+        console.log("--------------------\n");
+        console.log(finalTokenUri);
+        console.log("--------------------\n");
+
+        _safeMint(msg.sender, newItemId);
+        _setTokenURI(newItemId, finalTokenUri);
         _tokenIds.increment();
         console.log(
             "An NFT w/ ID %s has been minted to %s",
